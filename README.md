@@ -1,6 +1,6 @@
 # MQA
 
-MQA is a interactive Multi-modal Query Answering system, powered by [MUST]() and latest LLMs. Comprising five primary components - Data Preprocessing, Vector Representation, Index Construction, Query Execution, Answer Generation - MQA possesses a modular configuration.
+MQA is a interactive Multi-modal Query Answering system, powered by [MUST](https://github.com/ZJU-DAILY/MUST) and [CGraph](https://github.com/ChunelFeng/CGraph) and latest LLMs. Comprising five primary components - Data Preprocessing, Vector Representation, Index Construction, Query Execution, Answer Generation - MQA possesses a modular configuration.
 
 ## Requirements
 
@@ -32,6 +32,7 @@ We make the use of the [**Anaconda**](https://www.anaconda.com/) package manager
 
    ```
    cd ./indexing_and_search
+   git clone https://github.com/ChunelFeng/CGraph.git
    cmake build
    make
    ```
