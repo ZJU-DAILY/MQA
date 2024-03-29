@@ -1,0 +1,24 @@
+.wrapper {
+    position: relative;
+    margin-bottom: rem(30px);
+}
+
+.dropzone {
+    border-width: rem(1px);
+    padding-bottom: rem(50px);
+}
+
+.icon {
+    color: light-dark(var(--mantine-color-gray-4), var(--mantine-color-dark-3));
+}
+
+.icon:hover {
+    cursor: pointer;
+    color: light-dark(var(--mantine-color-gray-9), var(--mantine-color-dark-6));
+}
+
+.hero-title-image {
+    padding: 10px;
+    border: 2px dashed light-dark(var(--mantine-color-gray-4), var(--mantine-color-dark-3));
+    /*border: 10px dashed #000000;*/
+}
