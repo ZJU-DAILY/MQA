@@ -17,22 +17,24 @@ search_path = os.path.join(root, 'dataset', 'search')
 delete_id_path = os.path.join(root, 'dataset', 'delete.ivecs')
 
 
-def get_search(retrieval_framework, selected_target, retrieval_number, retrieval_weight):
+def get_search(retrieval_framework, selected_target, retrieval_number, retrieval_weight, index_method, index_path):
     if retrieval_framework == 'MR':
-        return SearchMr(selected_target, retrieval_number, retrieval_weight)
+        return SearchMr(selected_target, retrieval_number, retrieval_weight, index_method, index_path)
     elif retrieval_framework == 'JE':
-        return SearchJe(selected_target, retrieval_number, retrieval_weight)
+        return SearchJe(selected_target, retrieval_number, retrieval_weight, index_method, index_path)
     elif retrieval_framework == 'MUST':
-        return SearchMust(selected_target, retrieval_number, retrieval_weight)
+        return SearchMust(selected_target, retrieval_number, retrieval_weight, index_method, index_path)
 
 
 class BaseSearch:
-    def __init__(self, selected_target, retrieval_number, retrieval_weight):
+    def __init__(self, selected_target, retrieval_number, retrieval_weight, index_method, index_path):
         self.selected_target = selected_target
         self.retrieval_number = retrieval_number
         self.retrieval_weight = retrieval_weight
+        self.index_method = index_method
+        self.index_path = index_path
 
-    def search(self):
+    def preprocessing(self):
         selected_target = self.selected_target
 
         embedding = Embedding.get()
@@ -89,38 +91,16 @@ class BaseSearch:
                     self.retrieval_weight[i] = 0
                 encoder.encode(path=os.path.join(search_path, f'{i}.fvecs'), dataset=dataset, size=1, flag=flag)
 
-
-class SearchMr(BaseSearch):
-    def __init__(self, selected_target, retrieval_number, retrieval_weight):
-        super().__init__(selected_target, retrieval_number, retrieval_weight)
-
     def search(self):
-        super().search()
-        selected_target = self.selected_target
-        retrieval_number = self.retrieval_number
-        retrieval_weight = self.retrieval_weight
+        raise NotImplementedError
 
-        embedding = Embedding.get()
-        # if selected_target == -1:
-        #     retrieval_weight[0] = 0
-
-        args = f'{len(embedding.modalities)}'
-        for i, modality in enumerate(embedding.modalities):
-            base_name = f'{modality.encoder}'
-            for modal in modality.modals:
-                base_name += f'_{modal}'
-            args = args + ' ' + os.path.join(base_path, f"{base_name}.fvecs").replace('\\\\?\\', '')
-            args = args + ' ' + os.path.join(search_path, f"{i}.fvecs").replace('\\\\?\\', '')
-            args += f' {retrieval_weight[i]}'
-        args += f' {retrieval_number}'
-        args += ' ' + result_path.replace('\\\\?\\', '')
-        args += ' ' + delete_id_path.replace('\\\\?\\', '')
-
+    @staticmethod
+    def _search(args):
         print(args)
         if sys.platform.startswith('win'):
-            proc = subprocess.run(f'./indexing_and_search/search_mr.exe {args}')
+            proc = subprocess.run(f'./indexing_and_search/search.exe {args}')
         else:
-            proc = subprocess.run(f'./indexing_and_search/search_mr {args}')
+            proc = subprocess.run(f'./indexing_and_search/search {args}')
         if proc.returncode != 0:
             raise Exception(f'Search Error')
 
@@ -148,12 +128,56 @@ class SearchMr(BaseSearch):
         return images
 
 
-class SearchJe(BaseSearch):
-    def __init__(self, selected_target, retrieval_number, retrieval_weight):
-        super().__init__(selected_target, retrieval_number, retrieval_weight)
+class SearchMr(BaseSearch):
+    def __init__(self, selected_target, retrieval_number, retrieval_weight, index_method, index_path):
+        super().__init__(selected_target, retrieval_number, retrieval_weight, index_method, index_path)
 
     def search(self):
+        super().preprocessing()
+
+        retrieval_number = min(10, self.retrieval_number * 2)
+        retrieval_weight = self.retrieval_weight
+        index_method = self.index_method
+        index_path = self.index_path
+
+        embedding = Embedding.get()
+        results = []
+        for i, modality in enumerate(embedding.modalities):
+            args = '1'  # modality number
+            base_name = f'{modality.encoder}'
+            for modal in modality.modals:
+                base_name += f'_{modal}'
+            args = args + ' ' + os.path.join(base_path, f"{base_name}.fvecs").replace('\\\\?\\', '')
+            args = args + ' ' + os.path.join(search_path, f"{i}.fvecs").replace('\\\\?\\', '')
+            args += ' 1'  # retrieval weight
+            args += f' {retrieval_number}'
+            args += ' ' + result_path.replace('\\\\?\\', '')
+            args += ' ' + delete_id_path.replace('\\\\?\\', '')
+            args += f' {index_method}'
+            args += ' ' + index_path.replace('\\\\?\\', '')
+            results.append(super()._search(args))
+
+        count_dict = {}
+        for i, result in enumerate(results):
+            for item in result:
+                count_dict[item['id']] = count_dict.get(item['id'], 0) + retrieval_weight[i]
+        sorted_counts = sorted(count_dict.items(), key=lambda x: x[1], reverse=True)
+
+        ret = []
+        for item in sorted_counts[:self.retrieval_number]:
+            ret.append({'id': item[0]})
+        return ret
+
+
+class SearchJe(BaseSearch):
+    def __init__(self, selected_target, retrieval_number, retrieval_weight, index_method, index_path):
+        super().__init__(selected_target, retrieval_number, retrieval_weight, index_method, index_path)
+
+    def search(self):
+        retrieval_number = self.retrieval_number
         selected_target = self.selected_target
+        index_method = self.index_method
+        index_path = self.index_path
 
         embedding = Embedding.get()
         modality = embedding.modalities[0]
@@ -182,63 +206,32 @@ class SearchJe(BaseSearch):
                             break
         encoder.encode(path=os.path.join(search_path, f'0.fvecs'), dataset=dataset, size=1)
 
-        # super().search()
-        retrieval_number = self.retrieval_number
-
-        embedding = Embedding.get()
-        modality = embedding.modalities[0]
         base_name = f'{modality.encoder}'
         for modal in modality.modals:
             base_name += f'_{modal}'
-        args = os.path.join(base_path, f"{base_name}.fvecs").replace('\\\\?\\', '')
-        args = args + ' ' + os.path.join(search_path, "0.fvecs").replace('\\\\?\\', '')
+        args = '1'  # modal number
+        args += ' ' + os.path.join(base_path, f"{base_name}.fvecs").replace('\\\\?\\', '')
+        args += ' ' + os.path.join(search_path, "0.fvecs").replace('\\\\?\\', '')
         args += f' {retrieval_number}'
         args += ' ' + result_path.replace('\\\\?\\', '')
         args += ' ' + delete_id_path.replace('\\\\?\\', '')
+        args += f' {index_method}'
+        args += ' ' + index_path.replace('\\\\?\\', '')
 
-        print(args)
-        if sys.platform.startswith('win'):
-            proc = subprocess.run(f'./indexing_and_search/search_je.exe {args}')
-        else:
-            proc = subprocess.run(f'./indexing_and_search/search_je {args}')
-        if proc.returncode != 0:
-            raise Exception(f'Search Error. The target modal cannot use JE framework to search.')
-
-        res = []
-        with open(result_path, 'r') as file:
-            for line in file:
-                for item in line.strip().split(';'):
-                    res.append(item.split(','))
-
-        ids = []
-        images = []
-        for item in res:
-            images.append({
-                # 'http://127.0.0.1:4523/m1/4132394-0-default/image?meta=2&id=0'
-                'id': f'http://127.0.0.1:4523/m1/4132394-0-default/image?meta={0}&id={item[0]}'
-                # 'similarity': round(float(item[1]), 4),
-            })
-            ids.append(int(item[0]))
-
-        # delete id who has been searched
-        from vector_weight_learning import fvecs_converter
-        delete = fvecs_converter.ivecs_read(delete_id_path)
-        ids = np.array(ids)
-        delete[0] = np.concatenate((delete[0], ids))
-        fvecs_converter.to_ivecs(delete_id_path, delete)
-
-        return images
+        return super()._search(args)[:retrieval_number]
 
 
 class SearchMust(BaseSearch):
-    def __init__(self, selected_target, retrieval_number, retrieval_weight):
-        super().__init__(selected_target, retrieval_number, retrieval_weight)
+    def __init__(self, selected_target, retrieval_number, retrieval_weight, index_method, index_path):
+        super().__init__(selected_target, retrieval_number, retrieval_weight, index_method, index_path)
 
     def search(self):
-        super().search()
-        selected_target = self.selected_target
+        super().preprocessing()
+
         retrieval_number = self.retrieval_number
         retrieval_weight = self.retrieval_weight
+        index_method = self.index_method
+        index_path = self.index_path
 
         embedding = Embedding.get()
         args = f'{len(embedding.modalities)}'
@@ -252,34 +245,7 @@ class SearchMust(BaseSearch):
         args += f' {retrieval_number}'
         args += ' ' + result_path.replace('\\\\?\\', '')
         args += ' ' + delete_id_path.replace('\\\\?\\', '')
+        args += f' {index_method}'
+        args += ' ' + index_path.replace('\\\\?\\', '')
 
-        print(args)
-        if sys.platform.startswith('win'):
-            proc = subprocess.run(f'./indexing_and_search/search_must.exe {args}')
-        else:
-            proc = subprocess.run(f'./indexing_and_search/search_must {args}')
-        if proc.returncode != 0:
-            raise Exception(f'Search Error')
-
-        res = []
-        with open(result_path, 'r') as file:
-            for line in file:
-                for item in line.strip().split(';'):
-                    res.append(item.split(','))
-
-        ids = []
-        images = []
-        for item in res:
-            images.append({
-                'id': f'http://127.0.0.1:4523/m1/4132394-0-default/image?meta={0}&id={item[0]}'
-            })
-            ids.append(int(item[0]))
-
-        # delete id who has been searched
-        from vector_weight_learning import fvecs_converter
-        delete = fvecs_converter.ivecs_read(delete_id_path)
-        ids = np.array(ids)
-        delete[0] = np.concatenate((delete[0], ids))
-        fvecs_converter.to_ivecs(delete_id_path, delete)
-
-        return images
+        return super()._search(args)[:retrieval_number]

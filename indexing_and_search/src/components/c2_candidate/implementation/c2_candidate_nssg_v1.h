@@ -47,6 +47,8 @@ public:
         }
 
         for (IDType i = 0; i < num_; i++) {
+//            if (model_->graph_n_[i].empty()) continue;
+//            std::cerr << model_->graph_n_[i].size() << " ";
             std::vector<Neighbor>().swap(model_->graph_n_[i]);
         }
         std::vector<std::vector<Neighbor>>().swap(model_->graph_n_);

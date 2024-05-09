@@ -15,7 +15,7 @@ public:
     CStatus init() override {
         auto m_param = CGRAPH_GET_GPARAM(AnnsModelParam, GA_ALG_MODEL_PARAM_KEY)
         CGRAPH_ASSERT_NOT_NULL(m_param)
-
+//        std::cerr << Params.GA_ALG_INDEX_PATH_ << std::endl;
         std::ifstream f_in(Params.GA_ALG_INDEX_PATH_, std::ios::binary);
         if (!f_in.is_open()) {
             CGRAPH_RETURN_ERROR_STATUS("load graph error!")

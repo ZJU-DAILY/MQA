@@ -21,9 +21,6 @@ public:
         auto *s_param = CGRAPH_GET_GPARAM(AlgParamBasic, GA_ALG_PARAM_BASIC_KEY);
         CGRAPH_ASSERT_NOT_NULL(s_param)
 
-//        std::mt19937 gen(42);
-//        std::uniform_real_distribution<double> dis(-0.02, 0.02);
-
         std::ofstream f_out(Params.GA_ALG_RESULT_PATH_, std::ios::out);
         for (int i = 0; i < s_param->results.size(); ++i) {
             auto &result = s_param->results[i];
@@ -31,7 +28,6 @@ public:
             int GK = (int) result.size();
             for (int j = 0; j < GK; ++j) {
                 f_out << result[j] << ',' << dist[j];
-//                f_out << result[j] << "," << std::min(1.0, dist[j] + dis(gen));
                 j == (GK - 1) ? f_out << "\n" : f_out << ";";
             }
         }

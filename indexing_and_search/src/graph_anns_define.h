@@ -14,7 +14,7 @@ struct ParamConfig {
     explicit ParamConfig() = default;
 
     void set_train_param(std::vector<char *> modal1_base_path, std::vector<char *> modal2_base_path, char *index_path,
-                         unsigned l = 100, unsigned r = 30, unsigned c = 200, unsigned k_init_graph = 100,
+                         unsigned r = 30, unsigned c = 200, unsigned l = 100, unsigned k_init_graph = 100,
                          unsigned nn_size = 50, unsigned rnn_size = 25, unsigned pool_size = 200,
                          unsigned iter = 8, unsigned sample_num = 100, float graph_quality_threshold = 0.8) {
         GA_ALG_BASE_MODAL1_PATH_ = std::move(modal1_base_path);
@@ -35,7 +35,8 @@ struct ParamConfig {
     void set_search_param(std::vector<char *> modal1_base_path, std::vector<char *> modal2_base_path,
                           std::vector<char *> modal1_query_path, std::vector<char *> modal2_query_path,
                           char *res_path, unsigned top_k = 1,
-                          char *gt_path = {}, unsigned gt_k = 1, unsigned L_search = 200, char *index_path = nullptr) {
+                          char *index_path = nullptr,
+                          char *gt_path = {}, unsigned gt_k = 1, unsigned L_search = 200) {
         GA_ALG_BASE_MODAL1_PATH_ = std::move(modal1_base_path);
         GA_ALG_BASE_MODAL2_PATH_ = std::move(modal2_base_path);
         GA_ALG_QUERY_MODAL1_PATH_ = std::move(modal1_query_path);

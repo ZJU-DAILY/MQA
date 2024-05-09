@@ -14,10 +14,11 @@ public:
         /**
          * load search & train param
          */
-        CStatus status = CGRAPH_CREATE_GPARAM(NPGTrainParam, GA_ALG_NPG_TRAIN_PARAM_KEY)
-        status += CGRAPH_CREATE_GPARAM(NPGSearchParam, GA_ALG_NPG_SEARCH_PARAM_KEY)
+//        CStatus status = CGRAPH_CREATE_GPARAM(NPGTrainParam, GA_ALG_NPG_TRAIN_PARAM_KEY)
+//        status += CGRAPH_CREATE_GPARAM(NPGSearchParam, GA_ALG_NPG_SEARCH_PARAM_KEY)
 //        status += CGRAPH_CREATE_GPARAM(AlgParamBasic, GA_ALG_PARAM_BASIC_KEY)
-        return status;
+//        return status;
+        CGRAPH_EMPTY_FUNCTION
     }
 
     CStatus run() override {

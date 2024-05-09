@@ -8,14 +8,13 @@ import os
 
 from pojo.dataset import get_modal_type
 from pojo.embedding import Embedding
-from pojo.index import get_index
+from pojo.index import get_index, set_index
 from pojo.response_data import ResponseData
 from pojo.search import get_search
 from vector_weight_learning import fvecs_converter
 
 blueprint = Blueprint('blueprint', __name__, url_prefix='/m1/4132394-0-default')
 
-visited = False
 
 # a decorator to simplify response
 def jsonify_response_data(f):
@@ -65,10 +64,12 @@ def post_index():
     neighbor = body['neighbor']
     candidate = body['candidate']
     index_weight = body['index_weight']
-    index = get_index(algorithm=algorithm, neighbor=neighbor, candidate=candidate, index_weight=index_weight)
-    if algorithm != 'Flat':
-        import time
-        time.sleep(2)
+
+    # normalize indexes' weight
+    total = sum(index_weight)
+    index_weight = [item / total for item in index_weight]
+
+    set_index(algorithm=algorithm, neighbor=neighbor, candidate=candidate, index_weight=index_weight)
     return ResponseData(data={})
 
 
@@ -80,14 +81,10 @@ def post_search():
         llm = request.form.get('llm')
         text = request.form.get('text')
         temperature = float(request.form.get('temperature'))
-        algorithm = request.form.get('algorithm')
-        neighbor = int(request.form.get('neighbor'))
-        candidate = int(request.form.get('candidate'))
         retrieval_number = int(request.form.get('resultNumber'))
         retrieval_framework = request.form.get('retrievalFramework')
         use_knowledge = bool(request.form.get('useKnowledge'))
         selected_target = int(request.form.get('selectedTarget'))
-        index_weight = [float(item) for item in json.loads(request.form.get('indexWeight'))]
         retrieval_weight = [float(item) for item in json.loads(request.form.get('retrievalWeight'))]
 
         for filename in os.listdir(search_path):
@@ -111,38 +108,18 @@ def post_search():
                         file.write(os.path.join(upload_path, tmp.filename))
 
         # fix weight
-        if len(index_weight) != 0:
-            total = sum(index_weight)
-            index_weight = [item / total for item in index_weight]
+        index_method, index_path = get_index()
         if len(retrieval_weight) != 0:
             total = sum(retrieval_weight)
             retrieval_weight = [item / total for item in retrieval_weight]
 
-        global visited
-        if llm == 'gpt-4(dall-e-2)':
-            import time
-            time.sleep(10)
-            if not visited:
-                visited = True
-                return ResponseData(data={
-                    'images': [{'id': 'http://127.0.0.1:4523/m1/4132394-0-default/image?meta=2&id=1'},
-                               {'id': 'http://127.0.0.1:4523/m1/4132394-0-default/image?meta=2&id=2'}],
-                    'reply': 'The image captures the mystical allure of a fog-laden landscape. A lone tree stands as a silent sentinel reflected perfectly in the still water below, while the backdrop is a dramatic interplay of light and shadow. The sun, obscured yet intense, pierces through the fog, illuminating the contours of the surrounding hills. This scene is a beautiful representation of the quiet yet dynamic nature of fog as it shrouds the earth, blurring the line between water and sky, reality and reflection.'
-                })
-            else:
-                return ResponseData(data={
-                    'images': [{'id': 'http://127.0.0.1:4523/m1/4132394-0-default/image?meta=2&id=3'},
-                               {'id': 'http://127.0.0.1:4523/m1/4132394-0-default/image?meta=2&id=4'}],
-                    'reply': 'This image is another enchanting capture of fog\'s mystical presence. The way the fog weaves through the valleys between the mountain peaks creates a scene of otherworldly beauty. The soft glow of the sun, filtering through the clouds, lends a celestial quality to the scene. The reflective water doubles the visual feast, creating a symmetrical balance that is soothing to the eyes. It\'s as if time stands still in this secluded haven, with the natural world holding its breath in a quiet moment of absolute tranquility.'
-                })
-        if use_knowledge:
-            index = get_index(algorithm=algorithm, neighbor=neighbor, candidate=candidate, index_weight=index_weight)
-            search = get_search(retrieval_framework=retrieval_framework,
-                                selected_target=selected_target,
-                                retrieval_number=retrieval_number,
-                                retrieval_weight=retrieval_weight)
-        else:
-            search = None
+        # print(use_knowledge)
+        search = None if not use_knowledge else get_search(retrieval_framework=retrieval_framework,
+                                                           selected_target=selected_target,
+                                                           retrieval_number=retrieval_number,
+                                                           retrieval_weight=retrieval_weight,
+                                                           index_path=index_path,
+                                                           index_method=index_method)
 
         # get LLM
         from pojo.llm import get_llm
@@ -152,13 +129,6 @@ def post_search():
 
     except Exception as e:
         return ResponseData(message=str(e), data={})
-
-
-# search with complete modal data
-@blueprint.route('/full_search', methods=['POST'])
-@jsonify_response_data
-def post_full_search():
-    pass
 
 
 @blueprint.route('/image', methods=['GET'])
@@ -206,9 +176,9 @@ if __name__ == '__main__':
     if not os.path.exists(base_path):
         os.mkdir(base_path)
 
-    index_path = os.path.join(dataset_path, 'index')
-    if not os.path.exists(index_path):
-        os.mkdir(index_path)
+    # index_path = os.path.join(dataset_path, 'index')
+    # if not os.path.exists(index_path):
+    #     os.mkdir(index_path)
 
     meta_path = os.path.join(dataset_path, 'meta')
     if not os.path.exists(meta_path):

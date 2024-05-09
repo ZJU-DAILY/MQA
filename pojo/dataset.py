@@ -106,7 +106,7 @@ class MitStates(BaseDataset):
                     noun_to_adjs[noun].append(adj)
                 num += 1
         pairs = []
-        print(noun_to_adjs)
+
         for i in range(100):
             noun = random.choice(query_nouns)
             while True:

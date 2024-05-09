@@ -22,11 +22,20 @@ public:
             return DAnnFuncType::ANN_PREPARE_ERROR;
         }
 
-        num_ = model_->train_meta_modal1_.num;
-        dim1_ = model_->train_meta_modal1_.dim;
-        dim2_ = model_->train_meta_modal2_.dim;
-        data_modal1_ = model_->train_meta_modal1_.data;
-        data_modal2_ = model_->train_meta_modal2_.data;
+        if (!model_->train_meta_modal1_.empty()) {
+            num_ = model_->train_meta_modal1_[0].num;
+        } else {
+            num_ = model_->train_meta_modal2_[0].num;
+        }
+
+        for (const auto& modal1: model_->train_meta_modal1_) {
+            dim1_.emplace_back(modal1.dim);
+            data_modal1_.emplace_back(modal1.data);
+        }
+        for (const auto& modal2: model_->train_meta_modal2_) {
+            dim2_.emplace_back(modal2.dim);
+            data_modal2_.emplace_back(modal2.data);
+        }
         out_degree_ = t_param->k_init_graph;
         model_->graph_n_.resize(num_);
         return DAnnFuncType::ANN_TRAIN;

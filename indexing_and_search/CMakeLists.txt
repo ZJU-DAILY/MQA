@@ -19,3 +19,13 @@ add_executable(search_must
         $<TARGET_OBJECTS:CGraph>
         search_must.cpp
 )
+
+add_executable(index
+        $<TARGET_OBJECTS:CGraph>
+        index.cpp
+)
+
+add_executable(search
+        $<TARGET_OBJECTS:CGraph>
+        search.cpp
+)

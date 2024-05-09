@@ -11,26 +11,31 @@ class C1InitializationVamana : public C1InitializationBasic {
 public:
     DAnnFuncType prepareParam() override {
         model_ = CGRAPH_GET_GPARAM(AnnsModelParam, GA_ALG_MODEL_PARAM_KEY);
-        auto t_param = CGRAPH_GET_GPARAM(NPGTrainParam, GA_ALG_NPG_TRAIN_PARAM_KEY);
+        auto* t_param = CGRAPH_GET_GPARAM(NPGTrainParam, GA_ALG_NPG_TRAIN_PARAM_KEY);
         if (nullptr == t_param || nullptr == model_) {
             return DAnnFuncType::ANN_PREPARE_ERROR;
         }
 
-        num_ = model_->train_meta_modal1_.num;
-        dim1_ = model_->train_meta_modal1_.dim;
-        dim2_ = model_->train_meta_modal2_.dim;
-        data_modal1_ = model_->train_meta_modal1_.data;
-        data_modal2_ = model_->train_meta_modal2_.data;
+        num_ = model_->train_meta_modal1_.empty() ? model_->train_meta_modal2_[0].num : model_->train_meta_modal1_[0].num;
+        for (const auto& modal1: model_->train_meta_modal1_) {
+            dim1_.emplace_back(modal1.dim);
+            data_modal1_.emplace_back(modal1.data);
+        }
+        for (const auto& modal2: model_->train_meta_modal2_) {
+            dim2_.emplace_back(modal2.dim);
+            data_modal2_.emplace_back(modal2.data);
+        }
         out_degree_ = t_param->k_init_graph;
-        model_->graph_n_.reserve(num_);
-
+//        model_->graph_n_.reserve(num_);
+        model_->graph_n_.resize(num_);
         return DAnnFuncType::ANN_TRAIN;
     }
 
 
     CStatus train() override {
         graph_neigh_.clear();
-        graph_neigh_.reserve(out_degree_);
+//        graph_neigh_.reserve(out_degree_);
+        graph_neigh_.resize(out_degree_);
         std::vector<IDType> neighbor_id(out_degree_);
         GenRandomID(neighbor_id.data(), num_, out_degree_);
         for (const IDType &id: neighbor_id) {

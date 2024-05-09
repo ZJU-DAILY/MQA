@@ -41,6 +41,9 @@ class NoLlm(BaseLlm):
         with open(os.path.join(root, 'dataset', 'search', self.text_path), 'w') as file:
             file.write(content)
 
+        if self.search is None:
+            print("WHY self.search is None?")
+            return None
         images = self.search.search()
         reply = {
             'images': images,

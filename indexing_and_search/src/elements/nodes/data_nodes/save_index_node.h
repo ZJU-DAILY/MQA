@@ -20,8 +20,7 @@ public:
         auto m_param = CGRAPH_GET_GPARAM(AnnsModelParam, GA_ALG_MODEL_PARAM_KEY);
         CGRAPH_ASSERT_NOT_NULL(m_param)
 
-        std::fstream f_out(Params.GA_ALG_INDEX_PATH_, std::ios::binary | std::ios::out);
-
+        std::ofstream f_out(Params.GA_ALG_INDEX_PATH_, std::ios::binary);
         IDType num = m_param->train_meta_modal1_.empty() ? m_param->train_meta_modal2_[0].num
                                                          : m_param->train_meta_modal1_[0].num;
 
