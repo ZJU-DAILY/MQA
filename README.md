@@ -95,13 +95,6 @@ author={Mengzhao Wang and Xiangyu Ke and Xiaoliang Xu and Lu Chen and Yunjun Gao
 booktitle={IEEE International Conference on Data Engineering (ICDE)},
 year={2024}
 }
-
-@manual{MVG_VLDB2024,
-  author    = {Mengzhao Wang and Xiangyu Ke and Lu Chen and Yunjun Gao},
-  title     = {MVG Index: Empowering Multi-Vector Similarity Search in High-Dimensional Spaces},
-  url       = {https://github.com/ZJU-DAILY/MVG/blob/main/MVG_technical_report.pdf},
-  year      = {2024}
-}
 ```
 
 ## Acknowledgement
