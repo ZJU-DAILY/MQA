@@ -34,6 +34,9 @@ class BaseSearch:
         self.index_method = index_method
         self.index_path = index_path
 
+    def get_selected_target(self):
+        return self.selected_target
+
     def preprocessing(self):
         selected_target = self.selected_target
 
@@ -91,6 +94,18 @@ class BaseSearch:
                     self.retrieval_weight[i] = 0
                 encoder.encode(path=os.path.join(search_path, f'{i}.fvecs'), dataset=dataset, size=1, flag=flag)
 
+    def add_delete(self, res):
+        ids = []
+        for item in res:
+            ids.append(int(item[0]))
+
+        # delete id who has been searched
+        from vector_weight_learning import fvecs_converter
+        delete = fvecs_converter.ivecs_read(delete_id_path)
+        ids = np.array(ids)
+        delete[0] = np.concatenate((delete[0], ids))
+        fvecs_converter.to_ivecs(delete_id_path, delete)
+
     def search(self):
         raise NotImplementedError
 
@@ -98,9 +113,9 @@ class BaseSearch:
     def _search(args):
         print(args)
         if sys.platform.startswith('win'):
-            proc = subprocess.run(f'./indexing_and_search/search.exe {args}')
+            proc = subprocess.run(f'./index_and_search/search.exe {args}')
         else:
-            proc = subprocess.run(f'./indexing_and_search/search {args}')
+            proc = subprocess.run(f'./index_and_search/search {args}')
         if proc.returncode != 0:
             raise Exception(f'Search Error')
 
@@ -118,14 +133,7 @@ class BaseSearch:
             })
             ids.append(int(item[0]))
 
-        # delete id who has been searched
-        from vector_weight_learning import fvecs_converter
-        delete = fvecs_converter.ivecs_read(delete_id_path)
-        ids = np.array(ids)
-        delete[0] = np.concatenate((delete[0], ids))
-        fvecs_converter.to_ivecs(delete_id_path, delete)
-
-        return images
+        return res, images
 
 
 class SearchMr(BaseSearch):
@@ -135,8 +143,7 @@ class SearchMr(BaseSearch):
     def search(self):
         super().preprocessing()
 
-        retrieval_number = min(10, self.retrieval_number * 2)
-        retrieval_weight = self.retrieval_weight
+        retrieval_number = self.retrieval_number
         index_method = self.index_method
         index_path = self.index_path
 
@@ -155,18 +162,24 @@ class SearchMr(BaseSearch):
             args += ' ' + delete_id_path.replace('\\\\?\\', '')
             args += f' {index_method}'
             args += ' ' + index_path.replace('\\\\?\\', '')
-            results.append(super()._search(args))
+            res, images = super()._search(args)
+            results.append(res)
 
         count_dict = {}
         for i, result in enumerate(results):
             for item in result:
-                count_dict[item['id']] = count_dict.get(item['id'], 0) + retrieval_weight[i]
+                if item[1] == 'nan':
+                    continue
+                count_dict[item[0]] = count_dict.get(item[0], 0) + 1
         sorted_counts = sorted(count_dict.items(), key=lambda x: x[1], reverse=True)
 
-        ret = []
+        res, images = [], []
         for item in sorted_counts[:self.retrieval_number]:
-            ret.append({'id': item[0]})
-        return ret
+            res.append([item[0], str(item[1])])
+            images.append({'id': f'http://127.0.0.1:4523/m1/4132394-0-default/image?meta={0}&id={item[0]}'})
+
+        self.add_delete(res)
+        return res, images
 
 
 class SearchJe(BaseSearch):
@@ -196,7 +209,7 @@ class SearchJe(BaseSearch):
         encoder = get_encoder(modality.encoder)
         for modal in modality.modals:
             dataset.append(os.path.join(search_path, f'{modal}.tmp'))
-            if os.path.exists(os.path.join(search_path, f'{modal}.tmp')):
+            if os.path.getsize(os.path.join(search_path, f'{modal}.tmp')) != 0:
                 continue
             with open(os.path.join(meta_path, f'{modal}.txt'), 'r') as file:
                 for line_num, line in enumerate(file):
@@ -212,13 +225,16 @@ class SearchJe(BaseSearch):
         args = '1'  # modal number
         args += ' ' + os.path.join(base_path, f"{base_name}.fvecs").replace('\\\\?\\', '')
         args += ' ' + os.path.join(search_path, "0.fvecs").replace('\\\\?\\', '')
+        args += ' 1'  # weight
         args += f' {retrieval_number}'
         args += ' ' + result_path.replace('\\\\?\\', '')
         args += ' ' + delete_id_path.replace('\\\\?\\', '')
         args += f' {index_method}'
         args += ' ' + index_path.replace('\\\\?\\', '')
 
-        return super()._search(args)[:retrieval_number]
+        res, images = super()._search(args)
+        self.add_delete(res)
+        return res, images
 
 
 class SearchMust(BaseSearch):
@@ -248,4 +264,6 @@ class SearchMust(BaseSearch):
         args += f' {index_method}'
         args += ' ' + index_path.replace('\\\\?\\', '')
 
-        return super()._search(args)[:retrieval_number]
+        res, images = super()._search(args)
+        self.add_delete(res)
+        return res, images

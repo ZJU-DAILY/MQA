@@ -1,0 +1,6 @@
+#ifndef GRAPHANNS_C5_CONNECTIVITY_INCLUDE_H
+#define GRAPHANNS_C5_CONNECTIVITY_INCLUDE_H
+
+#include "implementation/c5_connectivity_dfs.h"
+
+#endif //GRAPHANNS_C5_CONNECTIVITY_INCLUDE_H

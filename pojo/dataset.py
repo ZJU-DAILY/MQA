@@ -37,7 +37,7 @@ def create_meta(id):
                                                  [0.229, 0.224, 0.225])
             ])
         ).create_meta()
-        MitStates.generate_query_pair()
+        # MitStates.generate_query_pair()
     elif id < 10:
         # do sth with other dataset
         return
@@ -69,6 +69,8 @@ class MitStates(BaseDataset):
                     continue
                 adj, noun = caption.split()
                 if adj == 'adj':
+                    continue
+                if noun[0] != 'b':
                     continue
 
                 for filepath in listdir(os.path.join(self.path, 'images', caption)):
@@ -118,7 +120,6 @@ class MitStates(BaseDataset):
                 second = random.choice(caption_to_image_id[f'{adj2} {noun}'])
                 pairs.append([first, second])
                 break
-        pairs.sort(key=lambda x: (x[0], x[1]))
         with open(os.path.join(query_path, 'MitStates.txt'), 'w') as file:
             for first, second in pairs:
                 file.write(f'{first},{second}\n')

@@ -30,7 +30,8 @@ export const links: LinksFunction = () => [
     {rel: "stylesheet", href: styles},
 ];
 
-const algorithms = ["Flat", "Optimized Graph", "HNSW", "NSG", "DiskANN"]
+const algorithms = ["Flat", "KGraph", "NSG", "NSSG", "Vamana"]
+const LLMs = ['none', 'gpt-3.5-turbo', 'gpt-4-turbo', 'dall-e-3']
 
 type ContextType = {
     stepper: number,
@@ -57,7 +58,7 @@ export default function DashBoard() {
     // Stepper
     const [stepper, setStepper] = useState<number>(0);
     const [stepperDescription1, setStepperDescription1] = useState<string>(
-        `Knowledge: |Objects: |# Modal:`
+        `Knowledge: |# Objects: |Modal:`
     );
     const [stepperDescription2, setStepperDescription2] = useState<string>(
         'Encoder: |Dimension: |# Vector:'
@@ -144,8 +145,10 @@ export default function DashBoard() {
                 withCloseButton: true,
                 autoClose: 5000,
             });
-            setIndexWeight(modalities.map((_) => _.weight!))
-            setRetrievalWeight(modalities.map((_) => _.weight!))
+            setIndexWeight(data.data.weight)
+            setRetrievalWeight(data.data.weight)
+            // setIndexWeight(modalities.map((_) => _.weight!))
+            // setRetrievalWeight(modalities.map((_) => _.weight!))
             setStepper(2);
             setStepperDescription2(`Encoder:${modalities.map((_) => '\n' + _.encoder!.name)}| Dimension: ${modalities.map((_) => '\n' + _.encoder!.dimension.toString())}|# vector: ${encoderNumber}`);
         }
@@ -232,7 +235,7 @@ export default function DashBoard() {
     // if not use knowledge base, then use llm
     useEffect(() => {
         if (!useKnowledge && llm == 'none') {
-            setLlm('gpt-3.5-turbo');
+            setLlm(LLMs[1]);
             notifications.show({
                 title: 'LLM model changed',
                 message: 'LLM has been automatically changed to GPT-3.5-turbo due to the unused knowledge base.'
@@ -447,7 +450,7 @@ export default function DashBoard() {
                         onChange={(event) => {
                             setUseKnowledge(event.currentTarget.checked);
                             if (dataset) {
-                                setStepperDescription1(`Knowledge: ${dataset.name}|Objects: ${dataset.objects}|# Modal: ${dataset.modal.map(_ => _.type)}`)
+                                setStepperDescription1(`Knowledge: ${dataset.name}|# Objects: ${dataset.objects}|Modal: ${dataset.modal.map(_ => _.type)}`)
                             }
                         }}/>
 
@@ -849,7 +852,7 @@ export default function DashBoard() {
                    }}
             >
                 <Text>LLM Model</Text>
-                <Select data={["none", "gpt-3.5-turbo", "gpt-4(dall-e-2)"]} value={llm}
+                <Select data={LLMs} value={llm}
                         onChange={(value) => {
                             setLlm(value!)
                         }} allowDeselect={false}/>

@@ -1,0 +1,6 @@
+#ifndef GRAPHANNS_C4_PREPROCESSING_INCLUDE_H
+#define GRAPHANNS_C4_PREPROCESSING_INCLUDE_H
+
+#include "implementation/c4_preprocessing_centroid.h"
+
+#endif //GRAPHANNS_C4_PREPROCESSING_INCLUDE_H

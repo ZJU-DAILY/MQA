@@ -1,0 +1,14 @@
+/.idea/
+.DS_Store
+/src/cmake-build-debug/
+/src/cmake-build-release/
+/cmake-build-debug/
+/cmake-build-release/
+/cmake-build-debug-coverage/
+/build/
+/.xmake/
+/CGraph.srctrlbm
+/CGraph.srctrldb
+/CGraph.srctrlprj
+/.scannerwork/
+.vscode/

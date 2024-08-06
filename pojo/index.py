@@ -49,9 +49,9 @@ def set_index(algorithm, neighbor, candidate, index_weight):
     print(args)
     if not os.path.exists(index_path):
         if sys.platform.startswith('win'):
-            proc = subprocess.run(f'./indexing_and_search/index.exe {args}')
+            proc = subprocess.run(f'./index_and_search/index.exe {args}')
         else:
-            proc = subprocess.run(f'./indexing_and_search/index {args}')
+            proc = subprocess.run(f'./index_and_search/index {args}')
         if proc.returncode != 0:
             raise Exception(f'Index Error')
 

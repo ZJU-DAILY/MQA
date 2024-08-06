@@ -48,10 +48,10 @@ def post_embedding():
 
         embedding = Embedding(data=data)
         embedding.create_embedding(data=data)
-        if learning:
+        if learning and len(data['modalities']) > 1:
             weight = embedding.learning()
-            return ResponseData(data=weight)
-        return ResponseData(data={})
+            # return ResponseData(data=weight)
+        return ResponseData(data={"weight": weight})
     except Exception as e:
         return ResponseData(message=str(e), data={})
 
@@ -83,43 +83,44 @@ def post_search():
         temperature = float(request.form.get('temperature'))
         retrieval_number = int(request.form.get('resultNumber'))
         retrieval_framework = request.form.get('retrievalFramework')
-        use_knowledge = bool(request.form.get('useKnowledge'))
+        use_knowledge = request.form.get('useKnowledge')
         selected_target = int(request.form.get('selectedTarget'))
         retrieval_weight = [float(item) for item in json.loads(request.form.get('retrievalWeight'))]
 
-        for filename in os.listdir(search_path):
-            if filename != 'result.txt':
-                filepath = os.path.join(search_path, filename)
-                os.remove(filepath)
+        search = None
+        text_path = ""
+        if use_knowledge == 'true' and llm != 'dall-e-3':
+            for filename in os.listdir(search_path):
+                if filename != 'result.txt':
+                    filepath = os.path.join(search_path, filename)
+                    os.remove(filepath)
 
-        # save file to /search/xxx.tmp
-        text_path = ''
-        embedding = Embedding.get()
-        for i, modality in enumerate(embedding.modalities):
-            for j, modal in enumerate(modality.modals):
-                t = get_modal_type(modal)
-                with open(os.path.join(search_path, f'{modal}.tmp'), 'w') as file:
-                    if t == 'text':
-                        text_path = os.path.join(search_path, f'{modal}.tmp')
-                        file.write(text)
-                    elif t in request.files:
-                        tmp = request.files[t]
-                        tmp.save(os.path.join(upload_path, tmp.filename))
-                        file.write(os.path.join(upload_path, tmp.filename))
+            # save file to /search/xxx.tmp
+            text_path = ''
+            embedding = Embedding.get()
+            for i, modality in enumerate(embedding.modalities):
+                for j, modal in enumerate(modality.modals):
+                    t = get_modal_type(modal)
+                    with open(os.path.join(search_path, f'{modal}.tmp'), 'w') as file:
+                        if t == 'text':
+                            text_path = os.path.join(search_path, f'{modal}.tmp')
+                            file.write(text)
+                        elif t in request.files:
+                            tmp = request.files[t]
+                            tmp.save(os.path.join(upload_path, tmp.filename))
+                            file.write(os.path.join(upload_path, tmp.filename))
 
-        # fix weight
-        index_method, index_path = get_index()
-        if len(retrieval_weight) != 0:
-            total = sum(retrieval_weight)
-            retrieval_weight = [item / total for item in retrieval_weight]
-
-        # print(use_knowledge)
-        search = None if not use_knowledge else get_search(retrieval_framework=retrieval_framework,
-                                                           selected_target=selected_target,
-                                                           retrieval_number=retrieval_number,
-                                                           retrieval_weight=retrieval_weight,
-                                                           index_path=index_path,
-                                                           index_method=index_method)
+            # fix weight
+            index_method, index_path = get_index()
+            if len(retrieval_weight) != 0:
+                total = sum(retrieval_weight)
+                retrieval_weight = [item / total for item in retrieval_weight]
+            search = get_search(retrieval_framework=retrieval_framework,
+                       selected_target=selected_target,
+                       retrieval_number=retrieval_number,
+                       retrieval_weight=retrieval_weight,
+                       index_path=index_path,
+                       index_method=index_method)
 
         # get LLM
         from pojo.llm import get_llm
