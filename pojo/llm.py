@@ -1,6 +1,6 @@
 import os
 import sys
-import time
+import copy
 
 from openai import OpenAI
 
@@ -69,7 +69,7 @@ class OpenAiLlm(BaseLlm):
         self.support_image = image
 
     def is_search(self, content):
-        messages = self.history.copy()
+        messages = copy.deepcopy(self.history)
         messages.extend([
             {'role': 'user', 'content': content},
             {'role': 'system',
@@ -96,9 +96,7 @@ class OpenAiLlm(BaseLlm):
         return response != 'no'
 
     def extract_keywords(self, content):
-        if self.search.get_selected_target() != -1:
-            content += "By the way, I prefer the " + str(self.search.get_selected_target()) + "th image."
-        messages = self.history.copy()
+        messages = copy.deepcopy(self.history)
         messages.append({'role': 'user', 'content': content})    
         messages.append({'role': 'system',
                          'content': 'As a text analysis expert, please extract keywords from the historical dialogue '
@@ -110,6 +108,7 @@ class OpenAiLlm(BaseLlm):
                                     'string. For example, if the sentence is "I want red apples but not fresh," the '
                                     'output should be "red apples ripe." If there are no relevant keywords, output '
                                     'an empty string.'})
+        print("[LLM] extract keyword: " + str(messages))
         completion = self.client.chat.completions.create(
             model=self.model,
             messages=messages
@@ -120,9 +119,9 @@ class OpenAiLlm(BaseLlm):
         print("[LLM] keywords: " + keyword)
 
     def reply(self, content, prompt, images=[]):
-        messages = self.history.copy()
-        self.history.append({'role': 'user', 'content': content})
-        if self.support_image:
+        messages = copy.deepcopy(self.history)
+        self.history.append({'role': 'user', 'content': copy.deepcopy(content)})
+        if self.support_image and len(images) != 0:
             content.extend(images)
         messages.append({'role': 'user', 'content': content})
         messages.append({'role': 'system', 'content': prompt})
@@ -134,11 +133,13 @@ class OpenAiLlm(BaseLlm):
         )
         response = completion.choices[0].message.content
         self.history.append({'role': 'assistant', 'content': response})
+        while len(self.history) > 10:
+            self.history.pop(0)
         return response
 
     def generate_answer(self, content):
         if content != "":
-            if not self.is_search(content) or self.search is None:
+            if self.search is None or not self.is_search(content):
                 reply = self.reply(
                     content=content,
                     images=[],
@@ -149,8 +150,10 @@ class OpenAiLlm(BaseLlm):
                     'reply': reply
                 }
 
-            import base64
+            if self.search.get_selected_target() != -1:
+                content += "By the way, I prefer the " + str(self.search.get_selected_target()) + "th image."
             keyword_content = [{"type": "text", "text": content}]
+            import base64
             if self.support_image and os.path.exists(os.path.join(search_path, '0.tmp')):
                 with open(os.path.join(search_path, '0.tmp'), "r") as file:
                     for line_no, line in enumerate(file):

@@ -9,8 +9,10 @@ def eva_recall(res, gt, k):
     count = 0
     for i in range(len(res)):
         res_intersection = list(set(res[i]) & set(gt[i]))
-        count += min(len(res_intersection), k)
-    return count / (k * len(res))
+        # count += min(len(res_intersection), k)
+        count += len(res_intersection)
+    return count / sum(len(sublist) for sublist in res)
+    # return count / (k * len(res))
 
 
 # check test format in modals
@@ -40,32 +42,37 @@ def weight_learning(base_modal, query_modal, ground_truth):
     # calculate initial ground truth dist
     ground_truth_modal_dist = []
     for modal in range(modal_num):
-        dist = [dist_opt.dist_by_id(modal, i, ground_truth[i][:k]) for i in range(len(ground_truth))]
+        # dist = [dist_opt.dist_by_id(modal, i, ground_truth[i][:k]) for i in range(len(ground_truth))]
+        dist = [dist_opt.dist_by_id(modal, i, ground_truth[i]) for i in range(len(ground_truth))]
         ground_truth_modal_dist.append(dist)
 
     # set the aggregation function
     aggre_func = model.AggregationFunctionModel(modal_num=modal_num)
     criteria = model.AggregationFunctionLoss()
     # optimizer = model.AggregationFunctionOptimizer(params=aggre_func.omega, lr=1)
-    optimizer = model.torch.optim.Adam(aggre_func.omega, lr=0.2, betas=(0.9, 0.999), eps=1e-08, weight_decay=0,
+    optimizer = model.torch.optim.Adam(aggre_func.omega, lr=0.01, betas=(0.9, 0.999), eps=1e-08, weight_decay=0,
                                        amsgrad=False)
     print('Set aggregation function Successfully.')
 
     max_recall = 0
     opt = aggre_func.omega
-    for epoch in range(2):
+    for epoch in range(40):
         print("Epoch: #", epoch)
         # initialize the weight
-        # dist_opt.set_weight([(x[0]).item() for x in aggre_func.omega])
         dist_opt.set_weight([(x[0]).item() for x in aggre_func.omega])
         # k is same as the number of positive examples
 
         reca = dist_opt.top_k_id(ground_truth_len)
 
-        print(reca[:1])
+        # extract the negative points
+        filtered_reca = [
+            [item for item in sublist if item not in set(ground_truth[i])]
+            for i, sublist in enumerate(reca)
+        ]
+
         reca_modal_dist = []
         for modal in range(modal_num):
-            dist = [dist_opt.dist_by_id(modal, i, reca[i]) for i in range(len(reca))]
+            dist = [dist_opt.dist_by_id(modal, i, reca[i]) for i in range(len(filtered_reca))]
             reca_modal_dist.append(dist)
 
         phi_positive = []
@@ -88,20 +95,17 @@ def weight_learning(base_modal, query_modal, ground_truth):
 
         optimizer.zero_grad()
         loss = criteria(phi_positive, phi_negative)
-        # print(phi_positive)
-        # print(phi_negative)
         # Back propagate gradients along the computational graph
         loss.backward()
-
         # for p in aggre_func.parameters():
         #     p.data.clamp_(0.001, 1.0)
 
         aggre_func.clamp_parameters()
-
         print("Parameter: ", [x.item() for x in aggre_func.omega])
 
         cur_recall = eva_recall(reca, ground_truth, k)
-        print("Recall@%d: %lf" % (k, cur_recall))
+        # print("Recall@%d: %lf" % (k, cur_recall))
+        print("Recall@any: %lf" % cur_recall)
         if cur_recall > max_recall:
             max_recall = cur_recall
             opt = [x.item() for x in aggre_func.omega]

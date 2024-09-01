@@ -23,9 +23,11 @@ We make use of the [Anaconda](https://www.anaconda.com/) package manager in orde
    conda create -n mqa -y python=3.11.5
    conda activate mqa
    conda install flask=2.2.5
+   conda install tqdm=4.65.0
    conda install -y -c pytorch pytorch=2.1.2 torchvision=0.16.2
    pip install openai==1.14.0
-   pip install openai-clip
+   pip install git+https://gitclone.com/github.com/openai/CLIP.git
+   pip install pillow==10.2.0
    ```
 
 3. Compile C++ code for indexing and searching.

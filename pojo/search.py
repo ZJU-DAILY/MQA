@@ -74,8 +74,8 @@ class BaseSearch:
                                         f.write(line)
                                         break
                     else:
-                        with (open(os.path.join(search_path, f'0_{modal}.tmp'), 'w') as w,
-                              open(os.path.join(search_path, f'{modal}.tmp'), 'r') as r):
+                        with open(os.path.join(search_path, f'0_{modal}.tmp'), 'w') as w, open(
+                                os.path.join(search_path, f'{modal}.tmp'), 'r') as r:
                             for line in r:
                                 w.write(line)
                                 flag = True

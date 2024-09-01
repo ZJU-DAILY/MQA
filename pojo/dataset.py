@@ -70,8 +70,8 @@ class MitStates(BaseDataset):
                 adj, noun = caption.split()
                 if adj == 'adj':
                     continue
-                if noun[0] != 'b':
-                    continue
+                # if noun[0] != 'b':
+                #     continue
 
                 for filepath in listdir(os.path.join(self.path, 'images', caption)):
                     assert (filepath.endswith('jpg'))
